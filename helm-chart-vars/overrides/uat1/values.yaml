@@ -1,0 +1,62 @@
+applicationEnvironment: uat1
+fullnameOverride: eps-scheduler-services-uat1
+
+deployment:
+  env:
+    - name: spring.profiles.active
+      value: uat1
+    - name: database.connection.string
+      value: 'jdbc:oracle:thin:@//rdutxa-cus01.labcorp.com:1522,rdutxa-cus02.labcorp.com:1522/lcepsu1_rw'
+    - name: JAVA_OPTIONS
+      value: >-
+        -XshowSettings:vm
+        -XX:InitialRAMPercentage=70
+        -XX:MaxRAMPercentage=70
+        -XX:+UseParallelGC
+        -Dcom.labcorp.app.env=uat1
+    - name: database.username
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: database.user
+    - name: database.password
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: database.password
+    - name: quartz.database.username
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: quartz.database.user
+    - name: quartz.database.password
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: quartz.database.password
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "500Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "500m"
+
+route:
+  enabled: true
+  componentType: "api"
+  name: eps-scheduler-services-uat1
+  host: eps-scheduler-services-uat1.apps.ocpdtq.labcorp.com
+  path: /
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+  annotations:
+    haproxy.router.openshift.io/timeout: 2h
+
+service:
+  name: eps-scheduler-services-uat1
+  port: 8080

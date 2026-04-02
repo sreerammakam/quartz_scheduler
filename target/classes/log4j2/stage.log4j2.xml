@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration debug="true">
+
+	<DynamicThresholdFilter key="X-OnDemand-LogLevel" onMatch="ACCEPT" onMismatch="NEUTRAL">
+		<KeyValuePair key="TRACE" value="TRACE"/>
+		<KeyValuePair key="DEBUG" value="DEBUG"/>
+		<KeyValuePair key="INFO" value="INFO"/>
+		<KeyValuePair key="WARN" value="WARN"/>
+		<KeyValuePair key="ERROR" value="ERROR"/>
+		<KeyValuePair key="FATAL" value="FATAL"/>
+	</DynamicThresholdFilter>
+
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout>
+				<pattern>[%t] [%d] %-5p [eps-requestUUID=%X{eps-requestUUID}] %c %x - %m%n</pattern>
+			</PatternLayout>
+		</Console>
+	</Appenders>
+	<Loggers>
+		<Root level="info">
+			<Appender-ref ref="Console"/>
+		</Root>
+	</Loggers>
+
+</Configuration>

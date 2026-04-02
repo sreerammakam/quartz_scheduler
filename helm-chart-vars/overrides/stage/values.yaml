@@ -1,0 +1,62 @@
+applicationEnvironment: stage
+
+deployment:
+  env:
+    - name: spring.profiles.active
+      value: stage
+    - name: database.connection.string
+      value: 'jdbc:oracle:thin:@//rdutxa-cus01.labcorp.com:1522,rdutxa-cus02.labcorp.com:1522/lcepss1_rw'
+    - name: JAVA_OPTIONS
+      value: >-
+        -XshowSettings:vm
+        -XX:InitialRAMPercentage=70
+        -XX:MaxRAMPercentage=70
+        -XX:+UseParallelGC
+        -Dcom.labcorp.app.env=stage
+    - name: database.username
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: database.user
+    - name: database.password
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: database.password
+    - name: quartz.database.username
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: quartz.database.user
+    - name: quartz.database.password
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials
+          key: quartz.database.password
+  replicaCount: 1
+  deploymentStrategy:
+    type: "RollingUpdate"
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"
+      cpu: "250m"
+
+route:
+  enabled: true
+  componentType: "api"
+  name: eps-scheduler-services-stage
+  host: eps-scheduler-services-stage.apps.ocpstg.labcorp.com
+  path: /
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+  annotations:
+    haproxy.router.openshift.io/timeout: 2h

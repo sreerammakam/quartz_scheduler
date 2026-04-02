@@ -1,0 +1,120 @@
+pipeline {
+    agent { label 'linux' }
+    stages {
+        stage('Set Environment Variables and Build Options') {
+            steps {
+                script {
+                    commonutils.setDefaultEnvironmentVariables()
+                    commonutils.loadJenkinsEnvCommonsPropertiesFile()
+                    commonutils.environmentVariablesFinalSteps()
+                    commonutils.setBuildOptions("${env.LOG_ROTATOR_DAYS_TO_KEEP}", "${env.LOG_ROTATOR_NUMBER_TO_KEEP}", "${env.LOG_ROTATOR_ARTIFACT_DAYS_TO_KEEP}", "${env.LOG_ROTATOR_ARTIFACT_NUMBER_TO_KEEP}")
+                    commonutils.checkoutScm()
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                script {
+                    mavengoals.build()
+                }
+            }
+        }
+        stage('Unit Tests') {
+            steps {
+                script {
+                    mavengoals.unitTests()
+                }
+            }
+        }
+//        stage('SonarQube Analysis') {
+//            steps {
+//                script {
+//                    mavengoals.runSonarScan()
+//                }
+//            }
+//        }
+        stage('Build Docker Image') {
+            environment {
+                TAG = UUID.randomUUID().toString()
+            }
+            steps {
+                script {
+                    env.HOLDTAG="${TAG}"
+                    dockergoals.buildDockerImage()
+                }
+            }
+        }
+        stage('Security Scans') {
+            steps {
+                script {
+                    securityScan.performScans()
+                }
+            }
+        }
+        stage('Push Docker Image to Nexus') {
+            when { anyOf { branch "$DEVBRANCH"; branch "$RELEASEBRANCH"; branch "hotfix/*" }}
+            environment {
+                TAG = "${env.HOLDTAG}"
+            }   
+            steps {
+                script {
+                    dockergoals.pushImageToNexus()
+                }
+            }
+        }
+        stage('Get Common Helm Chart') {
+            steps {
+                dir("chart-temp") {
+                    script {
+                        openshiftgoals.checkoutCommonHelmChartRepo()
+                    }
+                }
+            }
+        }
+        stage('Merge Vars Into Helm Chart') {
+            steps {
+                dir("vars-temp") {
+                    script {
+                        checkout scm
+                        fileutils.copyAllContentsOfOneDirToAnother("helm-chart-vars/*", "../chart-temp/helm-chart-common")
+                    }
+                }
+                dir("chart-temp/helm-chart-common") {
+                    script {
+                        fileutils.cleanCopiedFiles()
+                        openshiftgoals.createImageValuesFile()
+                    }
+                }
+            }
+        }
+        stage('Package Helm Chart') {
+            steps {
+                dir("chart-temp/helm-chart-common") {
+                    script {
+                        dockergoals.packageHelmChart()
+                    }                   
+                }
+            }
+        }
+        stage('Push Chart to UCD') {
+            when { anyOf { branch "$DEVBRANCH"; branch "$RELEASEBRANCH"; branch "hotfix/*" }}
+            steps {
+                dir("chart-temp/helm-chart-common") {
+                    script {
+                        ucdgoals.createVersionWithArtifact()
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            script {
+                commonutils.finalSteps()
+            }
+        }
+        success {
+            cleanWs()
+        }
+    }
+}

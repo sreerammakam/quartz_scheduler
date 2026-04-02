@@ -1,0 +1,62 @@
+applicationEnvironment: qa2
+fullnameOverride: eps-scheduler-services-qa2
+
+service:
+  name: eps-scheduler-services-qa2
+  port: 8080
+  
+deployment:
+  env:
+    - name: spring.profiles.active
+      value: qa2
+    - name: database.connection.string
+      value: 'jdbc:oracle:thin:@//rdutxa-cus01.labcorp.com:1522,rdutxa-cus02.labcorp.com:1522/lcepsq2_rw'
+    - name: JAVA_OPTIONS
+      value: >-
+        -XshowSettings:vm
+        -XX:InitialRAMPercentage=50
+        -XX:MaxRAMPercentage=50
+        -XX:+UseParallelGC
+        -Dcom.labcorp.app.env=qa2
+    - name: database.username
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials-qa2
+          key: database.user
+    - name: database.password
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials-qa2
+          key: database.password
+    - name: quartz.database.username
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials-qa2
+          key: quartz.database.user
+    - name: quartz.database.password
+      valueFrom:
+        secretKeyRef:
+          name: service-credentials-qa2
+          key: quartz.database.password
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "200Mi"
+      cpu: "150m"
+    limits:
+      memory: "1Gi"
+      cpu: "375m"
+
+route:
+  enabled: true
+  componentType: "api"
+  name: eps-scheduler-services-qa2
+  host: eps-scheduler-services-qa2.apps.ocpdtq.labcorp.com
+  path: /
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+  annotations:
+    haproxy.router.openshift.io/timeout: 2h
